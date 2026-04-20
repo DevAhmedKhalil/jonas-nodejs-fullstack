@@ -13,6 +13,18 @@ const { uploadSingleImage } = require("../middlewares/uploadImageMiddleware");
 const UserModel = require("../models/userModel");
 const User = require("../models/userModel");
 
+const filterObj = (obj, ...allowedFields) => {
+  const newObj = {};
+
+  Object.keys(obj).forEach((key) => {
+    if (allowedFields.includes(key)) {
+      newObj[key] = obj[key];
+    }
+  });
+
+  return newObj;
+};
+
 //! Upload single image middleware
 exports.uploadUserImage = uploadSingleImage("profileImg");
 
@@ -70,7 +82,7 @@ exports.updateUser = asyncHandler(async (req, res, next) => {
       email: req.body.email,
       phone: req.body.phone,
       role: req.body.role,
-      isActive: req.body.isActive,
+      active: req.body.active,
       profileImg: req.body.profileImg,
     },
     {
@@ -107,6 +119,72 @@ exports.changeUserPassword = asyncHandler(async (req, res, next) => {
     );
 
   res.status(200).json({ data: document });
+});
+
+exports.getLoggedUserData = asyncHandler(async (req, res, next) => {
+  req.params.id = req.user._id;
+  next();
+});
+
+exports.updateLoggedUserPassword = asyncHandler(async (req, res, next) => {
+  const user = await User.findById(req.user._id).select("+password");
+
+  if (!user) {
+    return next(new ApiError("User not found.", 404));
+  }
+
+  const isCorrectPassword = await bcrypt.compare(
+    req.body.currentPassword,
+    user.password
+  );
+
+  if (!isCorrectPassword) {
+    return next(new ApiError("Incorrect current password.", 401));
+  }
+
+  user.password = req.body.password;
+  user.passwordChangedAt = Date.now();
+  await user.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Password updated successfully.",
+  });
+});
+
+exports.updateLoggedUserData = asyncHandler(async (req, res, next) => {
+  if (req.body.password || req.body.passwordConfirm) {
+    return next(
+      new ApiError(
+        "This route is not for password updates. Please use /updateMyPassword.",
+        400
+      )
+    );
+  }
+
+  const filteredBody = filterObj(
+    req.body,
+    "name",
+    "email",
+    "phone",
+    "profileImg"
+  );
+
+  const updatedUser = await User.findByIdAndUpdate(req.user._id, filteredBody, {
+    new: true,
+    runValidators: true,
+  });
+
+  res.status(200).json({
+    status: "success",
+    data: updatedUser,
+  });
+});
+
+exports.deactivateLoggedUser = asyncHandler(async (req, res) => {
+  await User.findByIdAndUpdate(req.user._id, { active: false });
+
+  res.status(204).send();
 });
 
 // @desc      Delete specific user

@@ -5,6 +5,8 @@ const path = require("path");
 const express = require("express");
 const dotenv = require("dotenv");
 const morgan = require("morgan");
+const cors = require("cors");
+const fs = require("fs");
 
 // Require modules from project
 dotenv.config({ path: "config.env" });
@@ -24,10 +26,24 @@ dbConnection();
 
 //! Express app
 const app = express();
+const frontendDistPath = path.join(__dirname, "frontend", "dist");
+const legacyPublicPath = path.join(__dirname, "public");
 
 //! Middlewares
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
 app.use(express.json()); // Middleware for parsing JSON bodies
 app.use(express.static(path.join(__dirname, "uploads"))); // serve static files in 'uploads'
+
+if (fs.existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+} else if (fs.existsSync(legacyPublicPath)) {
+  app.use(express.static(legacyPublicPath));
+}
 
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
@@ -43,6 +59,20 @@ app.use("/api/v1/brands", brandRoute);
 app.use("/api/v1/products", productRoute);
 app.use("/api/v1/users", userRoute);
 app.use("/api/v1/auth", authRoute);
+
+if (fs.existsSync(frontendDistPath)) {
+  app.get("*", (req, res, next) => {
+    if (req.originalUrl.startsWith("/api/")) {
+      return next();
+    }
+
+    res.sendFile(path.join(frontendDistPath, "index.html"));
+  });
+} else if (fs.existsSync(legacyPublicPath)) {
+  app.get("/", (req, res) => {
+    res.sendFile(path.join(legacyPublicPath, "index.html"));
+  });
+}
 
 //! Handling Unknown Routes
 app.all("*", (req, res, next) => {

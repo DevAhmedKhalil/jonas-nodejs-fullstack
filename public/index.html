@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NileCart Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero__copy">
+          <p class="eyebrow">Node.js Ecommerce Frontend</p>
+          <h1>Run your API with a real storefront and a simple admin desk.</h1>
+          <p class="hero__text">
+            This frontend is wired directly to your Express backend. Browse
+            categories and products, sign in, and create new data without
+            leaving the browser.
+          </p>
+          <div class="hero__actions">
+            <button class="button button--primary" data-scroll-target="#catalog">
+              Explore catalog
+            </button>
+            <button class="button button--ghost" data-scroll-target="#admin">
+              Open admin desk
+            </button>
+          </div>
+        </div>
+        <aside class="hero__panel">
+          <div class="status-card">
+            <span class="status-dot"></span>
+            <div>
+              <strong>API endpoint</strong>
+              <p id="apiBaseLabel">http://localhost:8000/api/v1</p>
+            </div>
+          </div>
+          <div class="metric-grid">
+            <article class="metric">
+              <span>Categories</span>
+              <strong id="categoriesMetric">0</strong>
+            </article>
+            <article class="metric">
+              <span>Products</span>
+              <strong id="productsMetric">0</strong>
+            </article>
+            <article class="metric">
+              <span>Session</span>
+              <strong id="sessionMetric">Guest</strong>
+            </article>
+          </div>
+        </aside>
+      </header>
+
+      <main class="content-grid">
+        <section class="panel panel--catalog" id="catalog">
+          <div class="panel__header">
+            <div>
+              <p class="eyebrow">Catalog</p>
+              <h2>Live data from your backend</h2>
+            </div>
+            <button class="button button--secondary" id="refreshDataButton">
+              Refresh data
+            </button>
+          </div>
+
+          <div class="toolbar">
+            <label class="field">
+              <span>Search products</span>
+              <input
+                id="keywordInput"
+                type="search"
+                placeholder="Search by title or description"
+              />
+            </label>
+            <label class="field">
+              <span>Category</span>
+              <select id="categoryFilter">
+                <option value="">All categories</option>
+              </select>
+            </label>
+          </div>
+
+          <section class="stack">
+            <div class="section-title">
+              <h3>Categories</h3>
+              <p id="categoriesSummary">No categories yet</p>
+            </div>
+            <div id="categoriesGrid" class="category-grid"></div>
+          </section>
+
+          <section class="stack">
+            <div class="section-title">
+              <h3>Products</h3>
+              <p id="productsSummary">No products yet</p>
+            </div>
+            <div id="productsGrid" class="product-grid"></div>
+          </section>
+        </section>
+
+        <aside class="sidebar" id="admin">
+          <section class="panel">
+            <div class="panel__header panel__header--compact">
+              <div>
+                <p class="eyebrow">Session</p>
+                <h2>Authentication</h2>
+              </div>
+            </div>
+
+            <div class="session-box">
+              <p id="sessionStatus">You are browsing as a guest.</p>
+              <button class="button button--ghost hidden" id="logoutButton">
+                Log out
+              </button>
+            </div>
+
+            <form id="loginForm" class="form stack">
+              <div class="section-title">
+                <h3>Login</h3>
+                <p>Use an admin or manager account to create data.</p>
+              </div>
+              <label class="field">
+                <span>Email</span>
+                <input name="email" type="email" required />
+              </label>
+              <label class="field">
+                <span>Password</span>
+                <input name="password" type="password" required />
+              </label>
+              <button class="button button--primary" type="submit">
+                Sign in
+              </button>
+            </form>
+
+            <form id="signupForm" class="form stack">
+              <div class="section-title">
+                <h3>Create account</h3>
+                <p>Quick signup flow wired to your backend auth route.</p>
+              </div>
+              <label class="field">
+                <span>Name</span>
+                <input name="name" type="text" required />
+              </label>
+              <label class="field">
+                <span>Email</span>
+                <input name="email" type="email" required />
+              </label>
+              <label class="field">
+                <span>Password</span>
+                <input name="password" type="password" required />
+              </label>
+              <label class="field">
+                <span>Confirm password</span>
+                <input name="passwordConfirm" type="password" required />
+              </label>
+              <button class="button button--secondary" type="submit">
+                Sign up
+              </button>
+            </form>
+          </section>
+
+          <section class="panel">
+            <div class="panel__header panel__header--compact">
+              <div>
+                <p class="eyebrow">Admin Desk</p>
+                <h2>Create category</h2>
+              </div>
+            </div>
+
+            <form id="categoryForm" class="form stack">
+              <label class="field">
+                <span>Category name</span>
+                <input name="name" type="text" required />
+              </label>
+              <label class="field">
+                <span>Category image</span>
+                <input name="image" type="file" accept="image/*" />
+              </label>
+              <button class="button button--primary" type="submit">
+                Add category
+              </button>
+            </form>
+          </section>
+
+          <section class="panel">
+            <div class="panel__header panel__header--compact">
+              <div>
+                <p class="eyebrow">Admin Desk</p>
+                <h2>Create product</h2>
+              </div>
+            </div>
+
+            <form id="productForm" class="form stack">
+              <label class="field">
+                <span>Title</span>
+                <input name="title" type="text" required />
+              </label>
+              <label class="field">
+                <span>Description</span>
+                <textarea name="description" rows="4" required></textarea>
+              </label>
+              <div class="field-row">
+                <label class="field">
+                  <span>Price</span>
+                  <input name="price" type="number" min="0" required />
+                </label>
+                <label class="field">
+                  <span>Quantity</span>
+                  <input name="quantity" type="number" min="0" required />
+                </label>
+              </div>
+              <label class="field">
+                <span>Category</span>
+                <select name="category" id="productCategorySelect" required>
+                  <option value="">Select a category</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Image cover</span>
+                <input
+                  name="imageCover"
+                  type="file"
+                  accept="image/*"
+                  required
+                />
+              </label>
+              <label class="field">
+                <span>Gallery images</span>
+                <input name="images" type="file" accept="image/*" multiple />
+              </label>
+              <button class="button button--primary" type="submit">
+                Add product
+              </button>
+            </form>
+          </section>
+
+          <section class="panel panel--message">
+            <div class="panel__header panel__header--compact">
+              <div>
+                <p class="eyebrow">Console</p>
+                <h2>Live feedback</h2>
+              </div>
+            </div>
+            <div id="messageBox" class="message-box">
+              Ready. Load data or sign in to begin.
+            </div>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <template id="categoryCardTemplate">
+      <article class="category-card">
+        <div class="category-card__media"></div>
+        <div class="category-card__body">
+          <h3></h3>
+          <p></p>
+        </div>
+      </article>
+    </template>
+
+    <template id="productCardTemplate">
+      <article class="product-card">
+        <div class="product-card__image-wrap">
+          <img alt="" />
+        </div>
+        <div class="product-card__body">
+          <div class="product-card__headline">
+            <h3></h3>
+            <span class="price-pill"></span>
+          </div>
+          <p class="product-card__category"></p>
+          <p class="product-card__description"></p>
+          <div class="product-card__meta">
+            <span class="meta-chip quantity-chip"></span>
+            <span class="meta-chip sold-chip"></span>
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>

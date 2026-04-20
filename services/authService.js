@@ -13,6 +13,18 @@ const createToken = (payload) =>
     expiresIn: process.env.JWT_EXPIRE_TIME || "7d",
   });
 
+const createTokenResponse = (user, statusCode, res) => {
+  const token = createToken(user._id);
+
+  res.status(statusCode).json({
+    status: "success",
+    token,
+    data: {
+      user,
+    },
+  });
+};
+
 // @desc Signup
 // @route POST /api/v1/auth/signup
 // @access Public
@@ -24,13 +36,7 @@ exports.signup = asyncHandler(async (req, res, next) => {
     password: req.body.password,
   });
 
-  // 2- Generate token
-  const token = createToken(user._id);
-
-  res.status(201).json({
-    data: user,
-    token,
-  });
+  createTokenResponse(user, 201, res);
 });
 
 // @desc Login
@@ -39,17 +45,16 @@ exports.signup = asyncHandler(async (req, res, next) => {
 exports.login = asyncHandler(async (req, res, next) => {
   // 1- Check if password & email in the body (validation layer)
   // 2- Check if user exist & Check if password is correct
-  const user = await User.findOne({ email: req.body.email });
+  const user = await User.findOne({ email: req.body.email }).select(
+    "+password"
+  );
 
-  if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
+  if (!user || !(await user.correctPassword(req.body.password, user.password))) {
     return next(new ApiError("Incorrect email or password!", 401));
   }
 
-  // 3- Generate token
-  const token = createToken(user._id);
-
-  // 4- Send response to client side
-  res.status(200).json({ data: user, token });
+  user.password = undefined;
+  createTokenResponse(user, 200, res);
 });
 
 // @desc Make sure that the user is authenticated (logged in)
@@ -64,7 +69,6 @@ exports.protect = asyncHandler(async (req, res, next) => {
     req.headers.authorization.startsWith("Bearer")
   ) {
     token = req.headers.authorization.split(" ")[1];
-    console.log(token);
   }
   if (!token) {
     return next(
@@ -74,7 +78,6 @@ exports.protect = asyncHandler(async (req, res, next) => {
 
   // 2- Verify token (no change happens, expired token)
   const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
-  console.log(decoded);
 
   // 3- Check if user exist
   const currentUser = await User.findById(decoded.userId);
@@ -83,23 +86,10 @@ exports.protect = asyncHandler(async (req, res, next) => {
   }
 
   // 4- Check if user change his password after token created
-  if (currentUser.passwordChangedAt) {
-    // console.log(currentUser.passwordChangedAt, decoded.password);
-
-    const passwordChangedTimestamp = parseInt(
-      currentUser.passwordChangedAt.getTime() / 1000,
-      10
+  if (currentUser.passwordChangedAfter(decoded.iat)) {
+    return next(
+      new ApiError("User recently changed password! Please log in again.", 401)
     );
-
-    // Password changed after token created (ERROR)
-    if (passwordChangedTimestamp > decoded.iat) {
-      return next(
-        new ApiError(
-          "User recently changed password! Please log in again.",
-          401
-        )
-      );
-    }
   }
 
   req.user = currentUser;
@@ -147,5 +137,64 @@ exports.forgotPassword = asyncHandler(async (req, res, next) => {
   user.passwordResetVerified = false;
   await user.save();
 
-  // 3- Send reset code to email
+  // 3- Send reset code to client in development mode
+  res.status(200).json({
+    status: "success",
+    message: "Reset code generated successfully.",
+    resetCode:
+      process.env.NODE_ENV === "development" ? resetCode : undefined,
+  });
+});
+
+// @desc Verify reset code
+// @route POST /api/v1/auth/verifyResetCode
+// @access Public
+exports.verifyResetCode = asyncHandler(async (req, res, next) => {
+  const hashedResetCode = crypto
+    .createHash("sha256")
+    .update(req.body.resetCode)
+    .digest("hex");
+
+  const user = await User.findOne({
+    passwordResetCode: hashedResetCode,
+    passwordResetExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(new ApiError("Reset code invalid or expired.", 400));
+  }
+
+  user.passwordResetVerified = true;
+  await user.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Reset code verified successfully.",
+  });
+});
+
+// @desc Reset password
+// @route PUT /api/v1/auth/resetPassword
+// @access Public
+exports.resetPassword = asyncHandler(async (req, res, next) => {
+  const user = await User.findOne({ email: req.body.email }).select("+password");
+
+  if (!user) {
+    return next(new ApiError("No user found with this email.", 404));
+  }
+
+  if (!user.passwordResetVerified) {
+    return next(new ApiError("Reset code not verified.", 400));
+  }
+
+  user.password = req.body.newPassword;
+  user.passwordResetCode = undefined;
+  user.passwordResetExpires = undefined;
+  user.passwordResetVerified = undefined;
+  user.passwordChangedAt = Date.now();
+
+  await user.save();
+
+  user.password = undefined;
+  createTokenResponse(user, 200, res);
 });

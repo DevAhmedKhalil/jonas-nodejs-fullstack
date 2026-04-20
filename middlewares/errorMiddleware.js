@@ -19,11 +19,27 @@ const handleJwtInvalidSignature = () =>
 const handleJwtExpired = () =>
   new ApiError("Token expired, please login again...", 401);
 
+const handleCastErrorDB = (err) =>
+  new ApiError(`Invalid ${err.path}: ${err.value}`, 400);
+
+const handleDuplicateFieldsDB = (err) => {
+  const value = Object.values(err.keyValue).join(", ");
+  return new ApiError(`Duplicate field value: ${value}. Please use another value.`, 400);
+};
+
+const handleValidationErrorDB = (err) => {
+  const errors = Object.values(err.errors).map((val) => val.message);
+  return new ApiError(`Invalid input data. ${errors.join(". ")}`, 400);
+};
+
 //! Choose sending error to production or development mode
 const sendErrorResponse = (err, req, res) => {
   if (process.env.NODE_ENV === "development") {
     sendErrorDev(err, res);
   } else {
+    if (err.name === "CastError") err = handleCastErrorDB(err);
+    if (err.code === 11000) err = handleDuplicateFieldsDB(err);
+    if (err.name === "ValidationError") err = handleValidationErrorDB(err);
     if (err.name === "JsonWebTokenError") err = handleJwtInvalidSignature();
     if (err.name === "TokenExpiredError") err = handleJwtExpired();
     sendErrorProd(err, res);

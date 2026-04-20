@@ -33,7 +33,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, "Password is required."],
       minlength: [8, "Password should not be less than 8 characters."],
-      // select: false, //Is used to exclude this field from being returned in query results by default
+      select: false,
     },
     passwordChangedAt: Date,
     passwordResetCode: String,
@@ -61,6 +61,26 @@ userSchema.pre("save", async function (next) {
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
+
+userSchema.methods.correctPassword = async function (
+  candidatePassword,
+  userPassword
+) {
+  return bcrypt.compare(candidatePassword, userPassword);
+};
+
+userSchema.methods.passwordChangedAfter = function (jwtTimestamp) {
+  if (this.passwordChangedAt) {
+    const changedTimestamp = parseInt(
+      this.passwordChangedAt.getTime() / 1000,
+      10
+    );
+
+    return changedTimestamp > jwtTimestamp;
+  }
+
+  return false;
+};
 
 const User = mongoose.model("User", userSchema);
 

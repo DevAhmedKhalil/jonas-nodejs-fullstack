@@ -4,14 +4,20 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "db:start": "docker compose up -d",
+    "db:stop": "docker compose down",
     "start:dev": "nodemon server.js",
-    "start:prod": "set NODE_ENV=production && node server.js"
+    "start:prod": "set NODE_ENV=production && node server.js",
+    "client:dev": "npm --prefix frontend run dev",
+    "client:build": "npm --prefix frontend run build",
+    "dev:full": "concurrently \"npm run start:dev\" \"npm run client:dev\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-async-handler": "^1.2.0",
@@ -26,6 +32,7 @@
   },
   "devDependencies": {
     "colors": "^1.4.0",
+    "concurrently": "^9.2.1",
     "eslint": "^8.57.0",
     "eslint-config-airbnb": "^19.0.4",
     "eslint-config-prettier": "^9.1.0",

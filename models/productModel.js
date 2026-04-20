@@ -86,8 +86,10 @@ productSchema.pre(/^find/, function (next) {
 const setImgURL = (doc) => {
   //@ return => image base url + image name
   if (doc.imageCover) {
-    const imageUrl = `${process.env.BASE_URL}/products/${doc.imageCover}`;
-    doc.imageCover = imageUrl;
+    const isAbsoluteUrl = /^https?:\/\//i.test(doc.imageCover);
+    doc.imageCover = isAbsoluteUrl
+      ? doc.imageCover
+      : `${process.env.BASE_URL}/products/${doc.imageCover}`;
   }
   // if (doc.images) {
   //   doc.images = doc.images.map((image) => {
@@ -98,7 +100,9 @@ const setImgURL = (doc) => {
   if (doc.images) {
     const imagesList = [];
     doc.images.forEach((image) => {
-      const imageUrl = `${process.env.BASE_URL}/products/${image}`;
+      const imageUrl = /^https?:\/\//i.test(image)
+        ? image
+        : `${process.env.BASE_URL}/products/${image}`;
       imagesList.push(imageUrl);
     });
     doc.images = imagesList;
